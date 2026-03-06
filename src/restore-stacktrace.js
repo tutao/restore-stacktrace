@@ -62,9 +62,14 @@ function parseAtWordLine(stackLine) {
 			compiledName: modifier,
 		}
 	}
-	const namedMatch = stackLine.match(/\s*at (new|async)?\s*([^\s]+) \(([^\s]+):(\d+):(\d+)\)/)
+	const namedMatch = stackLine.match(/\s*at (new|async)?\s*([^\s]+) \((([^\s]+):(\d+):(\d+)|<anonymous>)\)/)
 	if (namedMatch) {
-		const [_, modifier, compiledName, fileUrl, sourceLine, sourceColumn] = namedMatch
+		const [_, modifier, compiledName, location, fileUrl, sourceLine, sourceColumn] = namedMatch
+		if (location === "<anonymous>") {
+			return {
+				compiledName: (modifier ? (modifier + " ") : "") + compiledName,
+			}
+		}
 		const parsedFileUrl = new URL(fileUrl)
 		const bundleFile = parsedFileUrl.pathname.split("/").at(-1)
 		return {
@@ -113,6 +118,11 @@ async function outputLine(fetcher, stackLine, {
 	compiledName
 }) {
 	let result = ""
+	if (!bundleFile) {
+		result += '  at ';
+		result += compiledName + " "
+		return result
+	}
 	const sourceMap = await fetcher.getMap(bundleFile);
 
 	if (sourceMap == null) {
